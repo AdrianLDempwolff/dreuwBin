@@ -223,6 +223,13 @@ class qchem_script_builder(jsb.jobscript_builder):
         ret.append("plots")
         ret.append(self.__qchem_args.outfile + ".plots")
 
+        # Copy CAP data
+        ret.append("cap_adc_*_*.data")
+
+        # Copy additional printout data of PEQS (Poisson equation solver) jobs
+        ret.append("Epsilon.data")
+        ret.append("PEQS.data")
+
         # TODO possible other ideas:
         # plot.attach.alpha
         # plot.detach.alpha

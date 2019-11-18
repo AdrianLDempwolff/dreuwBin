@@ -133,6 +133,46 @@ class copy_from_to_hook(hook_base):
             string+=self.__generate_code_for_file(filename)
         return string
 
+class copy_from_to_w_pattern_hook(hook_base):
+    """
+    Hook to copy a list of files/dirs from one directory to another.
+    The list entries may contain '*' wildcards expanded by the bash shell,
+    in which case all matching files/dirs are copied.
+    All dirs are copied recursively, all links are dereferenced.
+
+    The relative paths are mainained, ie blubber/blub is copied from
+    A/blubber/blub to B/blubber/blub and the 
+    target dir is created if neccessary
+    """
+    def __init__(self,fromdir,todir,files):
+        super().__init__()
+        self.__files = files
+        self.__fromdir=fromdir
+        self.__todir=todir
+
+    def __generate_code_for_file(self,filename):
+        return 'for FILEORDIRPATH in $' + self.__fromdir + "/" + filename + '; do\n' \
+                + '    FILEORDIR=$(echo "$FILEORDIRPATH" | sed -e s@^$' + self.__fromdir + '//*@@)\n' \
+                + '    if [ -r "$FILEORDIRPATH" ]; then \n' \
+                + '        CPARGS="--dereference" \n' \
+                + '        [ -d "$FILEORDIRPATH" ] && CPARGS="--recursive"\n' \
+                + '        DIR=$(dirname "$FILEORDIR")\n' \
+                + '        mkdir -p "$'+self.__todir+'/$DIR"\n' \
+                + '        cp $CPARGS "$FILEORDIRPATH" "$' +self.__todir+'/$DIR"\n' \
+                + '    fi\n' \
+                + 'done\n'
+
+    def generate(self,data,params,calc_env):
+        """
+        Generate shell script code from the queuing_system_data,
+        the queuing_system_params and the calculation_environment
+        provided
+        """
+        string=""
+        for filename in self.__files:
+            string+=self.__generate_code_for_file(filename)
+        return string
+
 class copy_in_hook(hook_base):
     """
     Hook to copy a list of files/dirs to the server working directory
@@ -214,7 +254,7 @@ class copy_out_hook(hook_base):
             raise ValueError("The value passed to fromdir upon construction (==" \
                     + str(self.__fromdir) + ") of this class is not valid.")
 
-        return copy_from_to_hook(fromdir_actual,params.submit_workdir,self.__files)\
+        return copy_from_to_w_pattern_hook(fromdir_actual,params.submit_workdir,self.__files)\
                 .generate(data,params,calc_env)
 
 #######################################################################
